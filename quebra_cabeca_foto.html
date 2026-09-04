@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quebra-Cabeça com Foto</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f2f5f9;
+      color: #1f2937;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin: 0 0 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #667085;
+      margin-bottom: 20px;
+    }
+    .panel {
+      background: white;
+      border: 1px solid #dbe1ea;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 220px auto;
+      gap: 12px;
+      align-items: end;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+    input, select, button {
+      min-height: 44px;
+      font-size: 16px;
+      border-radius: 10px;
+    }
+    input, select {
+      width: 100%;
+      border: 1px solid #cfd7e3;
+      padding: 8px 10px;
+      background: #fff;
+    }
+    button {
+      border: 0;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .primary {
+      background: #2563eb;
+      color: white;
+    }
+    .secondary {
+      background: #e5e7eb;
+      color: #1f2937;
+    }
+    .btns {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .statusbar {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+    .badge {
+      background: #eef2f7;
+      border-radius: 10px;
+      padding: 8px 12px;
+      min-width: 120px;
+      text-align: center;
+    }
+    #status {
+      margin-top: 12px;
+      color: #475467;
+    }
+    .game-area {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 240px;
+      gap: 18px;
+      align-items: start;
+    }
+    .board-wrap {
+      background: white;
+      border: 1px solid #dbe1ea;
+      border-radius: 16px;
+      padding: 12px;
+    }
+    #board {
+      width: 100%;
+      max-width: 700px;
+      margin: 0 auto;
+      display: grid;
+      overflow: hidden;
+      border-radius: 10px;
+      background: #d9dee7;
+      user-select: none;
+    }
+    .piece {
+      border: 1px solid rgba(255,255,255,.6);
+      padding: 0;
+      margin: 0;
+      aspect-ratio: 1/1;
+      background-repeat: no-repeat;
+      cursor: grab;
+      outline-offset: -4px;
+    }
+    .piece.selected {
+      outline: 4px solid #f59e0b;
+      z-index: 2;
+    }
+    .piece.drag-over {
+      outline: 4px dashed #2563eb;
+      z-index: 3;
+    }
+    .preview-box {
+      background: white;
+      border: 1px solid #dbe1ea;
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .preview-box img {
+      width: 100%;
+      display: none;
+      border-radius: 10px;
+    }
+    .preview-empty {
+      min-height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #667085;
+      background: #f7f9fc;
+      border-radius: 10px;
+      padding: 15px;
+    }
+    .help {
+      font-size: 14px;
+      color: #667085;
+      line-height: 1.5;
+      margin-top: 12px;
+    }
+    @media (max-width: 800px) {
+      .controls { grid-template-columns: 1fr; }
+      .game-area { grid-template-columns: 1fr; }
+      .preview-box { order: -1; }
+    }
+    @media (max-width: 500px) {
+      .container { padding: 10px; }
+      h1 { font-size: 25px; }
+      .panel, .board-wrap, .preview-box { border-radius: 12px; }
+      .btns button { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧩 Quebra-Cabeça com Foto</h1>
+    <div class="subtitle">Escolha sua foto e monte um quebra-cabeça com até 30 peças.</div>
+
+    <div class="panel">
+      <div class="controls">
+        <div>
+          <label for="photoInput">Escolha uma foto</label>
+          <input id="photoInput" type="file" accept="image/*">
+        </div>
+
+        <div>
+          <label for="difficulty">Quantidade de peças</label>
+          <select id="difficulty">
+            <option value="2x2">4 peças — fácil</option>
+            <option value="3x3">9 peças</option>
+            <option value="3x4">12 peças</option>
+            <option value="4x4" selected>16 peças — médio</option>
+            <option value="4x5">20 peças</option>
+            <option value="5x5">25 peças</option>
+            <option value="5x6">30 peças — difícil</option>
+          </select>
+        </div>
+
+        <div class="btns">
+          <button id="startBtn" class="primary">Embaralhar e jogar</button>
+          <button id="resetBtn" class="secondary">Reiniciar</button>
+        </div>
+      </div>
+
+      <div class="statusbar">
+        <div class="badge">Movimentos<br><strong id="moves">0</strong></div>
+        <div class="badge">Tempo<br><strong id="timer">00:00</strong></div>
+      </div>
+
+      <div id="status">Escolha uma foto para começar.</div>
+    </div>
+
+    <div class="game-area">
+      <div class="board-wrap">
+        <div id="board"></div>
+      </div>
+
+      <div>
+        <div class="preview-box">
+          <h3 style="margin-top:0;">Imagem original</h3>
+          <img id="preview" alt="Imagem original">
+          <div id="previewEmpty" class="preview-empty">A imagem escolhida aparecerá aqui.</div>
+          <div class="help">
+            <strong>Como jogar:</strong><br>
+            • No PC: arraste uma peça sobre outra.<br>
+            • No celular: toque em uma peça e depois em outra.<br>
+            • O jogo termina quando todas as peças estiverem na posição correta.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const input = document.getElementById('photoInput');
+  const difficulty = document.getElementById('difficulty');
+  const startBtn = document.getElementById('startBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const board = document.getElementById('board');
+  const preview = document.getElementById('preview');
+  const previewEmpty = document.getElementById('previewEmpty');
+  const status = document.getElementById('status');
+  const movesEl = document.getElementById('moves');
+  const timerEl = document.getElementById('timer');
+
+  let imageUrl = '';
+  let rows = 4;
+  let cols = 4;
+  let order = [];
+  let moves = 0;
+  let selected = null;
+  let startedAt = 0;
+  let timerId = null;
+  let playing = false;
+  let dragged = null;
+
+  function parseGrid() {
+    const parts = difficulty.value.split('x').map(Number);
+    rows = parts[0];
+    cols = parts[1];
+  }
+
+  function formatTime(ms) {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const min = Math.floor(total / 60);
+    const sec = total % 60;
+    return String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+  }
+
+  function stopTimer() {
+    if (timerId) {
+      clearInterval(timerId);
+      timerId = null;
+    }
+  }
+
+  function startTimer() {
+    stopTimer();
+    startedAt = Date.now();
+    timerEl.textContent = '00:00';
+    timerId = setInterval(() => {
+      timerEl.textContent = formatTime(Date.now() - startedAt);
+    }, 1000);
+  }
+
+  function shuffle(n) {
+    const arr = Array.from({ length: n }, (_, i) => i);
+    do {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    } while (arr.every((v, i) => v === i) && n > 1);
+    return arr;
+  }
+
+  function isSolved() {
+    return order.every((v, i) => v === i);
+  }
+
+  function render() {
+    board.innerHTML = '';
+    board.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+    board.style.aspectRatio = `${cols}/${rows}`;
+
+    order.forEach((pieceIndex, pos) => {
+      const originalRow = Math.floor(pieceIndex / cols);
+      const originalCol = pieceIndex % cols;
+
+      const piece = document.createElement('button');
+      piece.type = 'button';
+      piece.className = 'piece';
+      piece.draggable = true;
+      piece.dataset.pos = pos;
+
+      piece.style.backgroundImage = `url("${imageUrl}")`;
+      piece.style.backgroundSize = `${cols * 100}% ${rows * 100}%`;
+      piece.style.backgroundPosition =
+        `${cols === 1 ? 0 : (originalCol / (cols - 1)) * 100}% ` +
+        `${rows === 1 ? 0 : (originalRow / (rows - 1)) * 100}%`;
+
+      piece.addEventListener('click', () => selectPiece(pos));
+
+      piece.addEventListener('dragstart', (e) => {
+        dragged = pos;
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      piece.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        piece.classList.add('drag-over');
+      });
+
+      piece.addEventListener('dragleave', () => {
+        piece.classList.remove('drag-over');
+      });
+
+      piece.addEventListener('drop', (e) => {
+        e.preventDefault();
+        piece.classList.remove('drag-over');
+        if (dragged !== null && dragged !== pos) {
+          swap(dragged, pos);
+        }
+        dragged = null;
+      });
+
+      piece.addEventListener('dragend', () => {
+        dragged = null;
+        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+      });
+
+      board.appendChild(piece);
+    });
+  }
+
+  function selectPiece(pos) {
+    if (!playing) return;
+
+    if (selected === null) {
+      selected = pos;
+      board.children[pos].classList.add('selected');
+      status.textContent = 'Agora escolha outra peça para trocar.';
+      return;
+    }
+
+    if (selected === pos) {
+      board.children[pos].classList.remove('selected');
+      selected = null;
+      status.textContent = 'Seleção cancelada.';
+      return;
+    }
+
+    const first = selected;
+    selected = null;
+    swap(first, pos);
+  }
+
+  function swap(a, b) {
+    if (!playing || a === b) return;
+
+    [order[a], order[b]] = [order[b], order[a]];
+    moves++;
+    movesEl.textContent = moves;
+    render();
+
+    if (isSolved()) {
+      playing = false;
+      stopTimer();
+      const elapsed = formatTime(Date.now() - startedAt);
+      timerEl.textContent = elapsed;
+      status.textContent = `🎉 Parabéns! Você concluiu em ${moves} movimentos e ${elapsed}.`;
+    } else {
+      status.textContent = 'Continue montando o quebra-cabeça!';
+    }
+  }
+
+  function begin() {
+    if (!imageUrl) {
+      status.textContent = 'Escolha uma foto primeiro.';
+      return;
+    }
+
+    parseGrid();
+    const count = rows * cols;
+
+    if (count > 30) {
+      status.textContent = 'O máximo permitido é 30 peças.';
+      return;
+    }
+
+    order = shuffle(count);
+    moves = 0;
+    selected = null;
+    playing = true;
+    movesEl.textContent = '0';
+
+    render();
+    startTimer();
+    status.textContent = `Jogo iniciado com ${count} peças. Boa sorte!`;
+  }
+
+  input.addEventListener('change', () => {
+    const file = input.files && input.files[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      status.textContent = 'Escolha um arquivo de imagem válido.';
+      return;
+    }
+
+    if (imageUrl) URL.revokeObjectURL(imageUrl);
+    imageUrl = URL.createObjectURL(file);
+
+    preview.src = imageUrl;
+    preview.style.display = 'block';
+    previewEmpty.style.display = 'none';
+
+    playing = false;
+    stopTimer();
+    board.innerHTML = '';
+    movesEl.textContent = '0';
+    timerEl.textContent = '00:00';
+    status.textContent = 'Foto carregada. Escolha a quantidade de peças e clique em "Embaralhar e jogar".';
+  });
+
+  startBtn.addEventListener('click', begin);
+
+  resetBtn.addEventListener('click', () => {
+    if (!imageUrl) {
+      status.textContent = 'Escolha uma foto primeiro.';
+      return;
+    }
+    begin();
+  });
+})();
+</script>
+</body>
+</html>
